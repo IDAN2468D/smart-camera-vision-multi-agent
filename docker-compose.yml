@@ -1,0 +1,105 @@
+services:
+  # Microservice 1: Hebrew Voice TTS Audio Engine (Port 5001 -> Host 5007)
+  voice_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vision_ai_voice
+    command: ["python", "services/voice_service_app.py"]
+    restart: unless-stopped
+    ports:
+      - "${PORT_VOICE:-5007}:5001"
+    environment:
+      - PORT=5001
+      - PYTHONPATH=/app
+    networks:
+      - vision-agent-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # Microservice 2: Model Context Protocol (MCP) JSON-RPC 2.0 Server (Port 5002 -> Host 5006)
+  mcp_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vision_ai_mcp
+    command: ["python", "services/mcp_service_app.py"]
+    restart: unless-stopped
+    ports:
+      - "${PORT_MCP:-5006}:5002"
+    environment:
+      - PORT=5002
+      - PYTHONPATH=/app
+      - MONGO_URI=${MONGO_URI}
+      - DB_NAME=${DB_NAME:-vision_agents_db}
+      - COLLECTION_NAME=${COLLECTION_NAME:-detections}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - MODEL_ID=${MODEL_ID:-gemini-3.5-flash-lite}
+    networks:
+      - vision-agent-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # Microservice 3: Multi-Agent Vision Orchestrator & REST API (Port 5000 -> Host 5005)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vision_ai_backend
+    restart: unless-stopped
+    ports:
+      - "${PORT_BACKEND:-5005}:5000"
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - DB_NAME=${DB_NAME:-vision_agents_db}
+      - COLLECTION_NAME=${COLLECTION_NAME:-detections}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - MODEL_ID=${MODEL_ID:-gemini-3.5-flash-lite}
+      - HEADLESS=true
+      - FLASK_HOST=0.0.0.0
+      - FLASK_PORT=5000
+      - PYTHONPATH=/app
+      - VOICE_SERVICE_URL=http://voice_service:5001
+      - MCP_SERVICE_URL=http://mcp_service:5002
+    depends_on:
+      voice_service:
+        condition: service_healthy
+      mcp_service:
+        condition: service_healthy
+    networks:
+      - vision-agent-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Microservice 4: API Gateway & Next.js 14 Frontend Web HUD (Port 3000 -> Host 3002)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vision_ai_frontend
+    restart: unless-stopped
+    ports:
+      - "${PORT_FRONTEND:-3002}:3000"
+    environment:
+      - BACKEND_URL=http://backend:5000
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - vision-agent-net
+
+networks:
+  vision-agent-net:
+    driver: bridge

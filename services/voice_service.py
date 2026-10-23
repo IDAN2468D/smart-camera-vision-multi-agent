@@ -1,0 +1,112 @@
+import io
+import re
+import os
+import base64
+import asyncio
+import logging
+from typing import Optional
+import edge_tts
+
+logger = logging.getLogger(__name__)
+
+class VoiceService:
+    """Hebrew Voice Agent (TTS) service using edge-tts for natural neural speech synthesis.
+    
+    Supports both decoupled microservice HTTP calls and in-process local execution.
+    """
+
+    DEFAULT_VOICE = "he-IL-AvriNeural"  # Natural Hebrew male voice (Alternative: "he-IL-HilaNeural")
+
+    def __init__(self, voice: str = DEFAULT_VOICE):
+        self.voice = voice
+
+    @staticmethod
+    def _clean_text_for_speech(text: str) -> str:
+        """Strip markdown syntax, URLs, bullet points and symbols for pleasant pronunciation."""
+        if not text:
+            return ""
+        text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+        text = re.sub(r'[*_~`#>]', ' ', text)
+        text = re.sub(r'^\s*[-+*]\s+', '', text, flags=re.MULTILINE)
+        text = re.sub(r'\s*\n+\s*', '. ', text)
+        text = re.sub(r'\s{2,}', ' ', text)
+        return text.strip()
+
+    async def _synthesize_async(self, text: str, voice: str) -> bytes:
+        """Asynchronously stream audio chunks from edge-tts into memory buffer."""
+        communicate = edge_tts.Communicate(text, voice)
+        buffer = io.BytesIO()
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                buffer.write(chunk["data"])
+        return buffer.getvalue()
+
+    def generate_speech(self, text: str, voice: Optional[str] = None) -> Optional[str]:
+        """Synthesize Hebrew text into Base64 encoded MP3 audio.
+        
+        Args:
+            text: Text to speak (Hebrew summary or description).
+            voice: Voice name override (default: he-IL-AvriNeural).
+            
+        Returns:
+            Data URI string (data:audio/mp3;base64,...) or None if failed.
+        """
+        clean_text = self._clean_text_for_speech(text)
+        if not clean_text:
+            return None
+
+        words = clean_text.split()
+        if len(words) > 80:
+            clean_text = " ".join(words[:80]) + "..."
+
+        target_voice = voice or self.voice
+
+        # 1. Attempt calling dedicated Voice Microservice if configured
+        voice_service_url = os.environ.get("VOICE_SERVICE_URL")
+        if voice_service_url:
+            try:
+                import requests
+                res = requests.post(
+                    f"{voice_service_url}/synthesize",
+                    json={"text": clean_text, "voice": target_voice},
+                    timeout=8
+                )
+                if res.status_code == 200:
+                    data = res.json()
+                    b64 = data.get("audio_base64")
+                    if b64:
+                        logger.info(f"[Microservice] Successfully synthesized audio via {voice_service_url}")
+                        return b64
+            except Exception as net_err:
+                logger.warning(f"Voice microservice call failed ({net_err}). Falling back to local synthesis.")
+
+        # 2. Local in-process synthesis fallback
+        try:
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                        audio_bytes = executor.submit(
+                            lambda: asyncio.run(self._synthesize_async(clean_text, target_voice))
+                        ).result(timeout=10)
+                else:
+                    audio_bytes = loop.run_until_complete(self._synthesize_async(clean_text, target_voice))
+            except RuntimeError:
+                audio_bytes = asyncio.run(self._synthesize_async(clean_text, target_voice))
+
+            if not audio_bytes:
+                logger.warning("edge-tts returned empty audio buffer")
+                return None
+
+            encoded = base64.b64encode(audio_bytes).decode("utf-8")
+            data_uri = f"data:audio/mp3;base64,{encoded}"
+            logger.info(f"Synthesized Hebrew speech audio ({len(audio_bytes)} bytes) for: '{clean_text[:35]}...'")
+            return data_uri
+
+        except Exception as e:
+            logger.error(f"Failed to synthesize Hebrew speech with edge-tts: {e}")
+            return None
+
+# Singleton service instance
+voice_service = VoiceService()

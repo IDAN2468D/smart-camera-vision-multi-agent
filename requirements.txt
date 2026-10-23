@@ -1,0 +1,12 @@
+agno
+google-genai
+opencv-python
+flask
+pymongo
+dnspython
+pydantic
+python-dotenv
+pillow
+edge-tts
+reportlab
+openpyxl

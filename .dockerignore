@@ -1,0 +1,13 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.git/
+.gitignore
+frontend/
+temp_frame.jpg
+web_temp_frame.jpg
+test_frame.jpg
+real_test_frame.jpg
