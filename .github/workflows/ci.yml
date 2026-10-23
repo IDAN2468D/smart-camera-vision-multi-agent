@@ -50,7 +50,7 @@ jobs:
 
       - name: Build Next.js Production Container
         run: |
-          docker build -t vision-ai-frontend:latest ./frontend
+          docker build --progress=plain -t vision-ai-frontend:latest ./frontend
 
   docker-validate:
     name: Docker Compose Topology Validation
