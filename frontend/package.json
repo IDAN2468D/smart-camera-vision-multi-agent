@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "node ./node_modules/next/dist/bin/next dev -p 3000",
-    "build": "node ./node_modules/next/dist/bin/next build",
-    "start": "node ./node_modules/next/dist/bin/next start -p 3000",
-    "lint": "node ./node_modules/next/dist/bin/next lint"
+    "dev": "next dev -p 3000 || node ./node_modules/next/dist/bin/next dev -p 3000",
+    "build": "next build || node ./node_modules/next/dist/bin/next build",
+    "start": "next start -p 3000 || node ./node_modules/next/dist/bin/next start -p 3000",
+    "lint": "next lint"
   },
   "dependencies": {
     "clsx": "^2.1.1",
