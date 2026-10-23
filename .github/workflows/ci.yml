@@ -56,7 +56,8 @@ jobs:
       - name: Install Frontend Dependencies
         working-directory: ./frontend
         run: |
-          npm install --include=optional
+          rm -f package-lock.json
+          npm install
 
       - name: Run Next.js Production Build
         working-directory: ./frontend
