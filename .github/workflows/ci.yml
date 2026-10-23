@@ -41,31 +41,16 @@ jobs:
           pytest tests/ -v
 
   frontend-build:
-    name: Frontend Typecheck & Build (Next.js 14)
+    name: Frontend Next.js Production Build (Docker)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install Frontend Dependencies
-        working-directory: ./frontend
+      - name: Build Next.js Production Container
         run: |
-          rm -f package-lock.json
-          npm install
-
-      - name: Run Next.js Production Build
-        working-directory: ./frontend
-        env:
-          NEXT_TELEMETRY_DISABLED: "1"
-          NODE_ENV: "production"
-        run: |
-          npm run build
+          docker build -t vision-ai-frontend:latest ./frontend
 
   docker-validate:
     name: Docker Compose Topology Validation
