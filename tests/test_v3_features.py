@@ -67,9 +67,12 @@ def test_few_shot_corrections_helper():
     assert "Espresso Cup" in prompt_few_shots
     assert "Mechanical Keyboard" in prompt_few_shots
 
+TINY_JPEG_B64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA="
+
 def test_api_ask_endpoint(client):
     """Verify /api/ask returns formatted AskVisionResponse."""
     payload = {
+        "image": TINY_JPEG_B64,
         "question_hebrew": "איזה צבע החפץ שביד שלי?"
     }
     resp = client.post("/api/ask", json=payload)
@@ -82,6 +85,7 @@ def test_api_ask_endpoint(client):
 def test_api_compare_endpoint(client):
     """Verify /api/compare returns structured comparison matrix with ILS pricing."""
     payload = {
+        "image_a": TINY_JPEG_B64,
         "label_a": "אוזניות Sony WH-1000XM5",
         "label_b": "אוזניות Bose QuietComfort Ultra"
     }
@@ -94,7 +98,11 @@ def test_api_compare_endpoint(client):
 
 def test_api_zones_diff_endpoint(client):
     """Verify /api/zones/diff runs delta computation."""
-    resp = client.post("/api/zones/diff", json={"zone_id": "zone_lobby"})
+    payload = {
+        "image": TINY_JPEG_B64,
+        "zone_id": "zone_lobby"
+    }
+    resp = client.post("/api/zones/diff", json=payload)
     assert resp.status_code == 200
     json_data = resp.get_json()
     assert json_data["success"] is True

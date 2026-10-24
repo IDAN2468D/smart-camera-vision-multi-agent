@@ -44,6 +44,8 @@ yarn-error.log*
 # Temporary files & runtime logs
 web_temp_frame.jpg
 temp_frame.jpg
+temp_*.jpg
+opt_*.jpg
 *.mp3
 test_*.mp3
 test_*.jpg

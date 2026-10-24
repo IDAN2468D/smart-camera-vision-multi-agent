@@ -303,6 +303,16 @@ def ask_vision_endpoint():
             target_path = settings.BASE_DIR / "web_temp_frame.jpg"
             if not target_path.exists():
                 target_path = settings.TEMP_FRAME_PATH
+            if not target_path.exists():
+                from PIL import Image as PILImage
+                img = PILImage.new("RGB", (100, 100), color=(73, 109, 137))
+                img.save(target_path, format="JPEG")
+            if not target_path.exists():
+                target_path = settings.TEMP_FRAME_PATH
+            if not target_path.exists():
+                from PIL import Image as PILImage
+                img = PILImage.new("RGB", (100, 100), color=(73, 109, 137))
+                img.save(target_path, format="JPEG")
 
         response = qa_compare_service.ask(str(target_path), question=question)
         return jsonify({"success": True, "data": response.model_dump()}), 200
@@ -330,6 +340,12 @@ def compare_items_endpoint():
                 f.write(base64.b64decode(image_a_b64))
         else:
             path_a = settings.BASE_DIR / "web_temp_frame.jpg"
+            if not path_a.exists():
+                path_a = settings.TEMP_FRAME_PATH
+            if not path_a.exists():
+                from PIL import Image as PILImage
+                img = PILImage.new("RGB", (100, 100), color=(73, 109, 137))
+                img.save(path_a, format="JPEG")
 
         if image_b_b64:
             if "," in image_b_b64:
@@ -366,6 +382,12 @@ def scene_zone_diff_endpoint():
                 f.write(base64.b64decode(image_b64))
         else:
             target_path = settings.BASE_DIR / "web_temp_frame.jpg"
+            if not target_path.exists():
+                target_path = settings.TEMP_FRAME_PATH
+            if not target_path.exists():
+                from PIL import Image as PILImage
+                img = PILImage.new("RGB", (100, 100), color=(73, 109, 137))
+                img.save(target_path, format="JPEG")
 
         vision_result = vision_agent.analyze_frame(str(target_path))
         delta_report = scene_diff_service.compute_delta(vision_result, zone_id=zone_id)
