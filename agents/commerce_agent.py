@@ -139,6 +139,16 @@ class CommercePriceAgent:
                 return None
 
             if info:
+                # Capture live Playwright screenshot of the price page
+                try:
+                    from services.browser_agent_service import browser_agent_service
+                    capture_res = browser_agent_service.capture_retail_price(info.model_name or vision_result.object_name)
+                    if capture_res:
+                        info.price_screenshot_base64 = capture_res.get("screenshot_base64")
+                        info.store_name = capture_res.get("store_name", "Zap / KSP")
+                except Exception as b_err:
+                    logger.debug(f"[CommerceAgent] Browser screenshot skipped: {b_err}")
+
                 self._cache[cache_key] = info
             return info
 

@@ -38,6 +38,8 @@ class ProductPriceInfo(BaseModel):
     specs_summary: Optional[str] = Field(default=None, description="Short technical specifications summary in Hebrew")
     source_url: Optional[str] = Field(default=None, description="Source reference link")
     bbox: Optional[SpatialBoundingBox] = Field(default=None, description="Bounding box location in frame for AR Hotspot")
+    store_name: Optional[str] = Field(default=None, description="Retail portal or store name (e.g. Zap, KSP, Ivory)")
+    price_screenshot_base64: Optional[str] = Field(default=None, description="Live Playwright screenshot of retail price tag")
 
 class SceneDeltaReport(BaseModel):
     """Temporal comparison against previous scan in the same zone."""

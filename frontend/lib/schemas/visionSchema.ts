@@ -17,6 +17,8 @@ export const ProductPriceInfoSchema = z.object({
   specs_summary: z.string().nullable().optional(),
   source_url: z.string().url().nullable().optional(),
   bbox: SpatialBoundingBoxSchema.nullable().optional(),
+  store_name: z.string().nullable().optional(),
+  price_screenshot_base64: z.string().nullable().optional(),
 });
 
 export const SceneDeltaReportSchema = z.object({

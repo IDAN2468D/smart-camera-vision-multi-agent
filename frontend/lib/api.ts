@@ -18,6 +18,8 @@ export interface ProductPriceInfo {
   estimated_price_ils?: string | null;
   specs_summary?: string | null;
   source_url?: string | null;
+  store_name?: string | null;
+  price_screenshot_base64?: string | null;
 }
 
 export interface DetectionItem {

@@ -14,3 +14,4 @@ requests
 ddgs
 python-bidi
 arabic-reshaper
+playwright

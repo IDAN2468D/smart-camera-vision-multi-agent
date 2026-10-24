@@ -257,6 +257,32 @@ export const LatestAnalysis: React.FC<LatestAnalysisProps> = ({ detection }) => 
               {detection.product_info.specs_summary}
             </p>
           )}
+
+          {/* Live Browser Price Screenshot */}
+          {detection.product_info.price_screenshot_base64 && (
+            <div className="mt-2.5 pt-2 border-t border-emerald-500/20">
+              <div className="text-[10px] font-mono text-emerald-400 mb-1 flex items-center justify-between">
+                <span>📸 צילום מסך חי מאתר החנות ({detection.product_info.store_name || "Zap.co.il"}):</span>
+                {detection.product_info.source_url && (
+                  <a
+                    href={detection.product_info.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-emerald-200"
+                  >
+                    פתח קישור ↗
+                  </a>
+                )}
+              </div>
+              <div className="rounded-lg overflow-hidden border border-emerald-500/30 max-h-40">
+                <img
+                  src={detection.product_info.price_screenshot_base64}
+                  alt="Live price snapshot"
+                  className="w-full object-cover object-top hover:scale-105 transition-transform"
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
