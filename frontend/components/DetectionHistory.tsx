@@ -282,13 +282,37 @@ export const DetectionHistory: React.FC<DetectionHistoryProps> = ({
             </div>
 
             {lightboxItem.product_info && (
-              <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-xs">
-                <div className="flex justify-between items-center text-emerald-300 font-bold mb-1">
+              <div className="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-xs flex flex-col gap-2">
+                <div className="flex justify-between items-center text-emerald-300 font-bold">
                   <span>{lightboxItem.product_info.model_name}</span>
                   <span>{lightboxItem.product_info.estimated_price_ils}</span>
                 </div>
+                {lightboxItem.product_info.store_name && (
+                  <div className="flex items-center justify-between text-[11px] font-mono text-emerald-400">
+                    <span>🛒 {lightboxItem.product_info.store_name}</span>
+                    {lightboxItem.product_info.source_url && (
+                      <a
+                        href={lightboxItem.product_info.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline hover:text-white"
+                      >
+                        פתח באתר ↗
+                      </a>
+                    )}
+                  </div>
+                )}
                 {lightboxItem.product_info.specs_summary && (
-                  <p dir="rtl" className="text-slate-300 text-right">{lightboxItem.product_info.specs_summary}</p>
+                  <p dir="rtl" className="text-slate-300 text-right mt-1">{lightboxItem.product_info.specs_summary}</p>
+                )}
+                {lightboxItem.product_info.price_screenshot_base64 && (
+                  <div className="mt-2 rounded-lg overflow-hidden border border-emerald-500/30 max-h-36">
+                    <img
+                      src={lightboxItem.product_info.price_screenshot_base64}
+                      alt="Price snapshot"
+                      className="w-full object-cover object-top"
+                    />
+                  </div>
                 )}
               </div>
             )}

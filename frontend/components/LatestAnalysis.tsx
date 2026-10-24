@@ -237,50 +237,77 @@ export const LatestAnalysis: React.FC<LatestAnalysisProps> = ({ detection }) => 
 
       {/* Commerce & Price Intelligence Card */}
       {detection.product_info && (
-        <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/40 to-slate-900/70 border border-emerald-500/40 text-xs">
-          <div className="flex items-center justify-between gap-2 mb-1.5">
-            <span className="font-semibold text-emerald-400 flex items-center gap-1.5 font-mono uppercase text-[11px]">
+        <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-950/40 via-slate-900/80 to-slate-900/90 border border-emerald-500/40 text-xs shadow-xl">
+          <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-emerald-500/20">
+            <span className="font-semibold text-emerald-400 flex items-center gap-1.5 font-mono uppercase text-[11px] tracking-wider">
               <ShoppingBag className="w-3.5 h-3.5" />
               Commerce & Price Intelligence
             </span>
             {detection.product_info.estimated_price_ils && (
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 font-mono text-xs">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 font-mono text-xs shadow-sm">
                 {detection.product_info.estimated_price_ils}
               </span>
             )}
           </div>
-          <div className="text-white font-medium mb-1">
-            {detection.product_info.model_name}
+
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div>
+              <span className="text-[10px] uppercase font-mono text-slate-400 block">מוצר אמיתי שזוהה:</span>
+              <h4 className="text-white font-bold text-sm tracking-wide mt-0.5">
+                {detection.product_info.model_name}
+              </h4>
+            </div>
+            {detection.product_info.store_name && (
+              <span className="text-[10px] font-mono px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
+                🛒 {detection.product_info.store_name}
+              </span>
+            )}
           </div>
+
           {detection.product_info.specs_summary && (
-            <p dir="rtl" className="text-slate-300 text-right font-sans text-xs mt-1 leading-relaxed">
+            <p dir="rtl" className="text-slate-300 text-right font-sans text-xs mt-1.5 leading-relaxed bg-slate-950/40 p-2.5 rounded-lg border border-slate-800">
               {detection.product_info.specs_summary}
             </p>
           )}
 
-          {/* Live Browser Price Screenshot */}
-          {detection.product_info.price_screenshot_base64 && (
-            <div className="mt-2.5 pt-2 border-t border-emerald-500/20">
-              <div className="text-[10px] font-mono text-emerald-400 mb-1 flex items-center justify-between">
-                <span>📸 צילום מסך חי מאתר החנות ({detection.product_info.store_name || "Zap.co.il"}):</span>
+          {/* Live Browser Price Screenshot & Store Link */}
+          {(detection.product_info.price_screenshot_base64 || detection.product_info.source_url) && (
+            <div className="mt-3 pt-2.5 border-t border-emerald-500/20 flex flex-col gap-2">
+              <div className="flex items-center justify-between text-[11px] font-mono">
+                <span className="text-emerald-400 flex items-center gap-1.5 font-semibold">
+                  📸 <span>צילום חי מאתר {detection.product_info.store_name || "Zap.co.il"}:</span>
+                </span>
                 {detection.product_info.source_url && (
                   <a
                     href={detection.product_info.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="underline hover:text-emerald-200"
+                    className="flex items-center gap-1 text-emerald-300 hover:text-white font-semibold underline underline-offset-2 transition-colors px-2 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30"
                   >
-                    פתח קישור ↗
+                    <span>פתח באתר החנות ↗</span>
                   </a>
                 )}
               </div>
-              <div className="rounded-lg overflow-hidden border border-emerald-500/30 max-h-40">
-                <img
-                  src={detection.product_info.price_screenshot_base64}
-                  alt="Live price snapshot"
-                  className="w-full object-cover object-top hover:scale-105 transition-transform"
-                />
-              </div>
+              {detection.product_info.price_screenshot_base64 && (
+                <a
+                  href={detection.product_info.source_url || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block rounded-lg overflow-hidden border border-emerald-500/30 max-h-48 group relative shadow-inner cursor-pointer"
+                  title="לחץ לפתיחה ישירה באתר החנות"
+                >
+                  <img
+                    src={detection.product_info.price_screenshot_base64}
+                    alt="Live price snapshot"
+                    className="w-full object-cover object-top group-hover:scale-102 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2.5">
+                    <span className="text-[10px] text-white font-mono bg-emerald-600/90 px-2.5 py-1 rounded shadow-md">
+                      פתח אתר השוואת מחירים בלשונית חדשה ↗
+                    </span>
+                  </div>
+                </a>
+              )}
             </div>
           )}
         </div>

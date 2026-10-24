@@ -108,3 +108,39 @@ def test_api_zones_diff_endpoint(client):
     assert json_data["success"] is True
     assert "delta" in json_data["data"]
     assert json_data["data"]["zone_id"] == "zone_lobby"
+
+def test_commerce_agent_commercial_candidate():
+    """Verify commercial item detection and candidate extraction."""
+    from agents.commerce_agent import commerce_agent
+
+    # Case 1: Pure face/gesture without objects should NOT be commercial
+    v_face = VisionAnalysisResult(
+        object_name="Human Face",
+        category="Human",
+        detected_entities=["Human Face"],
+        confidence=0.95,
+        visual_description="A person looking directly at the camera."
+    )
+    assert commerce_agent.is_commercial_item(v_face) is False
+
+    # Case 2: User holding a smartwatch with face in frame
+    v_watch = VisionAnalysisResult(
+        object_name="Smartwatch",
+        category="Electronics",
+        detected_entities=["Human Face", "Right Hand", "Smartwatch"],
+        confidence=0.98,
+        visual_description="A user holding up an Apple Watch Ultra."
+    )
+    assert commerce_agent.is_commercial_item(v_watch) is True
+    assert commerce_agent.get_commercial_candidate(v_watch) == "Smartwatch"
+
+    # Case 3: Face as object_name but product in detected_entities
+    v_held = VisionAnalysisResult(
+        object_name="Human Face",
+        category="Human",
+        detected_entities=["Human Face", "Hand", "Coffee Mug"],
+        confidence=0.91,
+        visual_description="User holding a coffee mug."
+    )
+    assert commerce_agent.is_commercial_item(v_held) is True
+    assert commerce_agent.get_commercial_candidate(v_held) == "Coffee Mug"

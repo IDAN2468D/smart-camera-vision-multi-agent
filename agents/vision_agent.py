@@ -36,10 +36,10 @@ class VisionPerceptionAgent:
                 "Your job is to thoroughly analyze the provided live camera frame and detect human faces, hands, gestures, held objects, and physical items.",
                 "1. HUMAN FACES: Check if a person's face is visible. Set face_detected=True, note facial expression, gaze, and features (e.g. eyeglasses, beard).",
                 "2. HANDS & GESTURES: Check if human hands, palms, fingers, or gestures are visible (e.g., open palm, waving, thumbs up, pointing, holding an object). Set hands_detected=True.",
-                "3. OBJECTS & ITEMS: Detect any physical objects held by hand or in the scene (e.g. Smartphone, Pen, Coffee Mug, Wristwatch, Bottle, Book, Key).",
-                "4. PRIMARY FOCUS (object_name): Identify the main subject/focus. If the user is holding an item, name the item. If displaying a hand or gesture, name the hand/gesture. If looking at the camera, name the person/face.",
-                "5. ALL DETECTED ENTITIES: Enumerate all recognized elements in detected_entities (e.g. ['Human Face', 'Right Hand', 'Smartphone']).",
-                "6. OCR TEXT: Read and extract any visible text, brand logos, or writing on screens, clothing, or objects.",
+                "3. OBJECTS & ITEMS: Detect any physical objects held by hand or in the scene (e.g. Smartwatch, Smartphone, Pen, Coffee Mug, Bottle, Headphones, Keys, Mouse). If the product has recognizable brand cues, specify the exact brand & model (e.g. Apple Watch Ultra, Logitech MX Master, iPhone 15, Sony WH-1000XM5).",
+                "4. PRIMARY FOCUS (object_name): Identify the main subject/focus. If the user is holding or presenting an item, PRIORITIZE naming that specific item/product. If displaying a hand or gesture, name the hand/gesture. If looking at the camera without held objects, name the person/face.",
+                "5. ALL DETECTED ENTITIES: Enumerate all recognized elements in detected_entities (e.g. ['Human Face', 'Right Hand', 'Apple Watch Ultra']). Always include any held or visible product here.",
+                "6. OCR TEXT & BRANDS: Read and extract any visible text, brand logos, model numbers, or writing on screens, clothing, dials, or objects into detected_text.",
                 "7. Provide an objective visual_description and a high-accuracy confidence score.",
                 "8. SPATIAL BOUNDING BOXES: For primary detected items or faces, produce spatial_bboxes containing label, confidence (0.0-1.0), normalized coordinates x_min, y_min, x_max, y_max (between 0.0 and 1.0), and horizontal pan_x from -1.0 (left) to 1.0 (right)."
             ]
