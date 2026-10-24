@@ -11,3 +11,6 @@ edge-tts
 reportlab
 openpyxl
 requests
+ddgs
+python-bidi
+arabic-reshaper

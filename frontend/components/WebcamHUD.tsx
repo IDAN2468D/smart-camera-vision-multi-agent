@@ -12,17 +12,24 @@ import {
   Sliders
 } from "lucide-react";
 import { analyzeImageFrame, DetectionItem } from "@/lib/api";
+import { spatialAudio } from "@/lib/spatialAudio";
+import VisionCanvasOverlay from "./VisionCanvasOverlay";
+import VoiceQuestionBar from "./VoiceQuestionBar";
 
 interface WebcamHUDProps {
   onScanComplete: (result: DetectionItem) => void;
   isAnalyzing: boolean;
   setIsAnalyzing: (analyzing: boolean) => void;
+  activeDetection?: DetectionItem | null;
+  onOpenCompare?: (frameB64?: string | null) => void;
 }
 
 export const WebcamHUD: React.FC<WebcamHUDProps> = ({
   onScanComplete,
   isAnalyzing,
   setIsAnalyzing,
+  activeDetection,
+  onOpenCompare,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -192,6 +199,9 @@ export const WebcamHUD: React.FC<WebcamHUDProps> = ({
         const result = await analyzeImageFrame(imageB64, source, gesture);
         if (result) {
           onScanComplete(result);
+          if (result.spatial_bboxes && result.spatial_bboxes.length > 0) {
+            spatialAudio.playSpatialPing(result.spatial_bboxes[0].pan_x || 0);
+          }
         }
       } catch (err: any) {
         console.error("Analysis trigger failed:", err);
@@ -316,6 +326,12 @@ export const WebcamHUD: React.FC<WebcamHUDProps> = ({
               </div>
             </div>
 
+            {/* 60-120Hz GPU Canvas Overlay */}
+            <VisionCanvasOverlay
+              bboxes={activeDetection?.spatial_bboxes}
+              gestureDetected={currentTrigger === "gesture_thumbs_up" ? "👍 Thumbs-Up" : null}
+            />
+
             {/* Corner Targeting Brackets */}
             <div className="absolute inset-4 pointer-events-none border border-cyan-500/20 rounded-xl">
               <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-cyan-400 rounded-tl-lg" />
@@ -416,6 +432,15 @@ export const WebcamHUD: React.FC<WebcamHUDProps> = ({
           {resolution.toUpperCase()}
         </button>
 
+        {/* Compare Studio Button */}
+        <button
+          onClick={() => onOpenCompare?.(captureFrame())}
+          className="flex items-center gap-1.5 px-3 py-3 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 font-mono text-xs transition-all active:scale-95"
+          title="פתח סטודיו להשוואת מוצרים"
+        >
+          <span>⚖️ השוואה</span>
+        </button>
+
         {/* Mirror Toggle Button */}
         <button
           onClick={() => setIsMirrored((prev) => !prev)}
@@ -425,6 +450,12 @@ export const WebcamHUD: React.FC<WebcamHUDProps> = ({
           <FlipHorizontal className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Ask Vision Live Conversational Voice Bar */}
+      <VoiceQuestionBar
+        onCaptureFrame={captureFrame}
+        isProcessing={isAnalyzing}
+      />
     </div>
   );
 };

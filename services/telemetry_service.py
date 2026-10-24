@@ -28,6 +28,21 @@ class TelemetryCostService:
         self.total_latency_seconds = 0.0
         self.total_human_evaluations = 0
 
+    def extract_tokens_from_response(self, response: Any) -> tuple:
+        """Extract prompt and completion tokens from model response if available."""
+        prompt_tokens = 450
+        completion_tokens = 180
+        try:
+            if hasattr(response, "metrics") and response.metrics:
+                prompt_tokens = getattr(response.metrics, "prompt_tokens", prompt_tokens) or prompt_tokens
+                completion_tokens = getattr(response.metrics, "completion_tokens", completion_tokens) or completion_tokens
+            elif hasattr(response, "usage") and response.usage:
+                prompt_tokens = getattr(response.usage, "prompt_tokens", prompt_tokens) or prompt_tokens
+                completion_tokens = getattr(response.usage, "completion_tokens", completion_tokens) or completion_tokens
+        except Exception:
+            pass
+        return prompt_tokens, completion_tokens
+
     def record_scan_metrics(
         self,
         duration_seconds: float,

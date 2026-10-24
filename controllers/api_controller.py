@@ -12,6 +12,9 @@ from services.mcp_server_service import mcp_server_service
 from services.guardrails_service import guardrails_service
 from services.telemetry_service import telemetry_service
 from services.embedding_client import embedding_client
+from services.qa_compare_service import qa_compare_service
+from services.scene_diff_service import scene_diff_service
+from agents.vision_agent import vision_agent
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +41,11 @@ def health_check():
             "visual_rag_vector_search": True,
             "ai_guardrails": True,
             "human_in_the_loop": True,
-            "context_cost_engineering": True
+            "context_cost_engineering": True,
+            "ask_vision_live": True,
+            "compare_studio": True,
+            "scene_delta_diff": True,
+            "spatial_audio_hrtf": True
         },
         "telemetry": metrics
     }), 200 if db_connected else 503
@@ -96,7 +103,9 @@ def analyze_frame_endpoint():
                 "gesture_detected": record.gesture_detected,
                 "product_info": record.product_info.model_dump() if record.product_info else None,
                 "thumbnail_base64": record.thumbnail_base64,
-                "tts_audio_base64": record.tts_audio_base64
+                "tts_audio_base64": record.tts_audio_base64,
+                "spatial_bboxes": [b.model_dump() for b in getattr(record, "spatial_bboxes", [])],
+                "scene_delta": record.scene_delta.model_dump() if record.scene_delta else None
             }
         }), 200
     except Exception as e:
@@ -273,6 +282,107 @@ def record_feedback():
         logger.error(f"Feedback recording failed: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
 
+@api_blueprint.route("/ask", methods=["POST"])
+def ask_vision_endpoint():
+    """Conversational Visual Q&A ('Ask Vision Live') endpoint."""
+    try:
+        data = request.get_json(silent=True) or {}
+        image_b64 = data.get("image")
+        question = data.get("question_hebrew", "").strip() or data.get("question", "").strip()
+
+        if not question:
+            return jsonify({"success": False, "message": "Field 'question_hebrew' is required"}), 400
+
+        target_path = settings.BASE_DIR / "temp_ask_frame.jpg"
+        if image_b64:
+            if "," in image_b64:
+                image_b64 = image_b64.split(",", 1)[1]
+            with open(target_path, "wb") as f:
+                f.write(base64.b64decode(image_b64))
+        else:
+            target_path = settings.BASE_DIR / "web_temp_frame.jpg"
+            if not target_path.exists():
+                target_path = settings.TEMP_FRAME_PATH
+
+        response = qa_compare_service.ask(str(target_path), question=question)
+        return jsonify({"success": True, "data": response.model_dump()}), 200
+    except Exception as e:
+        logger.error(f"Error in /api/ask endpoint: {e}", exc_info=True)
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@api_blueprint.route("/compare", methods=["POST"])
+def compare_items_endpoint():
+    """Side-by-side product comparison studio endpoint."""
+    try:
+        data = request.get_json(silent=True) or {}
+        image_a_b64 = data.get("image_a")
+        image_b_b64 = data.get("image_b")
+        label_a = data.get("label_a", "")
+        label_b = data.get("label_b", "")
+
+        path_a = settings.BASE_DIR / "temp_compare_a.jpg"
+        path_b = settings.BASE_DIR / "temp_compare_b.jpg"
+
+        if image_a_b64:
+            if "," in image_a_b64:
+                image_a_b64 = image_a_b64.split(",", 1)[1]
+            with open(path_a, "wb") as f:
+                f.write(base64.b64decode(image_a_b64))
+        else:
+            path_a = settings.BASE_DIR / "web_temp_frame.jpg"
+
+        if image_b_b64:
+            if "," in image_b_b64:
+                image_b_b64 = image_b_b64.split(",", 1)[1]
+            with open(path_b, "wb") as f:
+                f.write(base64.b64decode(image_b_b64))
+        else:
+            path_b = None
+
+        result = qa_compare_service.compare(
+            image_a_path=str(path_a),
+            image_b_path=str(path_b) if path_b else None,
+            label_a=label_a,
+            label_b=label_b
+        )
+        return jsonify({"success": True, "data": result.model_dump()}), 200
+    except Exception as e:
+        logger.error(f"Error in /api/compare endpoint: {e}", exc_info=True)
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@api_blueprint.route("/zones/diff", methods=["POST"])
+def scene_zone_diff_endpoint():
+    """Smart polygon zones & scene delta temporal diff endpoint."""
+    try:
+        data = request.get_json(silent=True) or {}
+        image_b64 = data.get("image")
+        zone_id = data.get("zone_id", "default_zone")
+
+        target_path = settings.BASE_DIR / "temp_zone_frame.jpg"
+        if image_b64:
+            if "," in image_b64:
+                image_b64 = image_b64.split(",", 1)[1]
+            with open(target_path, "wb") as f:
+                f.write(base64.b64decode(image_b64))
+        else:
+            target_path = settings.BASE_DIR / "web_temp_frame.jpg"
+
+        vision_result = vision_agent.analyze_frame(str(target_path))
+        delta_report = scene_diff_service.compute_delta(vision_result, zone_id=zone_id)
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "zone_id": zone_id,
+                "current_object": vision_result.object_name,
+                "detected_entities": vision_result.detected_entities,
+                "delta": delta_report.model_dump()
+            }
+        }), 200
+    except Exception as e:
+        logger.error(f"Error in /api/zones/diff endpoint: {e}", exc_info=True)
+        return jsonify({"success": False, "message": str(e)}), 500
+
 @api_blueprint.route("/metrics", methods=["GET"])
 def get_metrics():
     """Context Engineering & Cost Accounting Metrics Endpoint."""
@@ -332,6 +442,9 @@ def openapi_spec():
             "/api/export": {"get": {"summary": "Export PDF/Excel"}},
             "/api/mcp": {"post": {"summary": "Model Context Protocol JSON-RPC"}},
             "/api/detections/feedback": {"post": {"summary": "Human-In-The-Loop evaluation"}},
+            "/api/ask": {"post": {"summary": "Conversational Visual Q&A (Ask Vision Live)"}},
+            "/api/compare": {"post": {"summary": "Side-by-side product comparison studio"}},
+            "/api/zones/diff": {"post": {"summary": "Smart polygon zones & scene delta temporal diff"}},
             "/api/metrics": {"get": {"summary": "Token & cost metrics"}}
         }
     })

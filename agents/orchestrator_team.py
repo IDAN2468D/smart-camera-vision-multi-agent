@@ -165,6 +165,14 @@ class MultiAgentOrchestrator:
             )
             sse_service.publish("pipeline_status", {"status": "step_completed", "step": "voice"})
 
+        # Step 4.5: Compute temporal scene delta
+        scene_delta = None
+        try:
+            from services.scene_diff_service import scene_diff_service
+            scene_delta = scene_diff_service.compute_delta(vision_result)
+        except Exception as e:
+            logger.warning(f"[Orchestrator] Scene delta computation failed: {e}")
+
         # Step 5: Synthesis into validated DetectionRecord
         record = DetectionRecord(
             object_name=vision_result.object_name,
@@ -175,6 +183,7 @@ class MultiAgentOrchestrator:
             detected_text=vision_result.detected_text,
             confidence=vision_result.confidence,
             visual_description=vision_result.visual_description,
+            spatial_bboxes=getattr(vision_result, "spatial_bboxes", []),
             enrichment_summary=enrichment_summary,
             trigger_source=trigger_source,
             gesture_detected=gesture_detected,
@@ -182,7 +191,8 @@ class MultiAgentOrchestrator:
             thumbnail_base64=thumbnail_b64,
             tts_audio_base64=tts_audio_base64,
             image_embedding=image_embedding,
-            embedding_model=embedding_model
+            embedding_model=embedding_model,
+            scene_delta=scene_delta
         )
 
         total_duration = time.time() - start_time

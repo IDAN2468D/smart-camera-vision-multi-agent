@@ -77,15 +77,40 @@ class AgentGuardrailsService:
                 "evaluation_notes": notes,
                 "corrected_label": corrected_label
             }
-            result = db_collection.update_one(
-                {"timestamp": timestamp_iso},
-                {"$set": update_data}
-            )
+            # Match either ISO string or datetime object
+            query = {"$or": [{"timestamp": timestamp_iso}]}
+            try:
+                from datetime import datetime
+                query["$or"].append({"timestamp": datetime.fromisoformat(timestamp_iso.replace("Z", "+00:00"))})
+            except Exception:
+                pass
+
+            result = db_collection.update_one(query, {"$set": update_data})
             logger.info(f"[HITL] Human feedback recorded for detection {timestamp_iso}: verified={is_accurate}")
             return result.modified_count > 0 or result.matched_count > 0
         except Exception as e:
             logger.error(f"[HITL] Failed to record feedback: {e}")
             return False
+
+    def get_few_shot_corrections(self, db_collection, limit: int = 3) -> str:
+        """Fetch verified human corrections to inject into agent prompt as few-shot examples."""
+        try:
+            cursor = db_collection.find(
+                {"human_evaluated": True, "corrected_label": {"$exists": True, "$ne": None, "$ne": ""}},
+                {"_id": 0, "object_name": 1, "corrected_label": 1, "visual_description": 1}
+            ).limit(limit)
+            corrections = list(cursor)
+            if not corrections:
+                return ""
+            examples = []
+            for c in corrections:
+                examples.append(
+                    f"- When observing '{c.get('visual_description', '')[:60]}', initial was '{c.get('object_name')}', but human verified it is '{c.get('corrected_label')}'."
+                )
+            return "\n".join(examples)
+        except Exception as e:
+            logger.debug(f"[HITL] Could not fetch few-shot corrections: {e}")
+            return ""
 
 # Singleton service instance
 guardrails_service = AgentGuardrailsService()

@@ -14,6 +14,7 @@ import { StatsCards } from "@/components/StatsCards";
 import { WebcamHUD } from "@/components/WebcamHUD";
 import { LatestAnalysis } from "@/components/LatestAnalysis";
 import { DetectionHistory } from "@/components/DetectionHistory";
+import CompareView from "@/components/CompareView";
 
 export default function Home() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
@@ -22,6 +23,8 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [sseConnected, setSseConnected] = useState<boolean>(false);
+  const [isCompareOpen, setIsCompareOpen] = useState<boolean>(false);
+  const [compareFrame, setCompareFrame] = useState<string | null>(null);
 
   // Load initial health & detections
   const loadData = useCallback(async () => {
@@ -143,6 +146,11 @@ export default function Home() {
               onScanComplete={handleScanComplete}
               isAnalyzing={isAnalyzing}
               setIsAnalyzing={setIsAnalyzing}
+              activeDetection={activeDetection}
+              onOpenCompare={(frame) => {
+                setCompareFrame(frame || null);
+                setIsCompareOpen(true);
+              }}
             />
 
             {/* Quick Keyboard Hints & Status */}
@@ -177,6 +185,13 @@ export default function Home() {
             />
           </section>
         </div>
+
+        {/* Product Comparison Modal Studio */}
+        <CompareView
+          isOpen={isCompareOpen}
+          onClose={() => setIsCompareOpen(false)}
+          currentFrameBase64={compareFrame}
+        />
       </main>
 
       {/* Footer */}

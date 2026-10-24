@@ -1,4 +1,6 @@
 import io
+import os
+import re
 import logging
 from typing import List, Dict, Any
 from openpyxl import Workbook
@@ -7,8 +9,38 @@ from reportlab.lib.pagesizes import letter, landscape
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 logger = logging.getLogger(__name__)
+
+# Try registering Unicode/Hebrew font
+HEBREW_FONT_NAME = "Helvetica"
+for candidate in [
+    "C:/Windows/Fonts/arial.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+]:
+    if os.path.exists(candidate):
+        try:
+            pdfmetrics.registerFont(TTFont("ArialHebrew", candidate))
+            HEBREW_FONT_NAME = "ArialHebrew"
+            break
+        except Exception:
+            pass
+
+def _bidi_format(text: str) -> str:
+    """Format Hebrew text for RTL PDF rendering using python-bidi if Hebrew characters are present."""
+    if not text:
+        return ""
+    # Check if string contains Hebrew characters
+    if re.search(r'[\u0590-\u05FF]', text):
+        try:
+            from bidi.algorithm import get_display
+            return get_display(str(text))
+        except Exception:
+            return str(text)
+    return str(text)
 
 class ExportService:
     """Service for exporting detection logs and analytics to PDF and Excel formats."""
@@ -123,6 +155,7 @@ class ExportService:
         title_style = ParagraphStyle(
             name="TitleStyle",
             parent=styles["Heading1"],
+            fontName=HEBREW_FONT_NAME,
             fontSize=18,
             textColor=colors.HexColor("#0F172A"),
             spaceAfter=10
@@ -130,6 +163,7 @@ class ExportService:
         subtitle_style = ParagraphStyle(
             name="SubTitleStyle",
             parent=styles["Normal"],
+            fontName=HEBREW_FONT_NAME,
             fontSize=10,
             textColor=colors.HexColor("#64748B"),
             spaceAfter=15
@@ -137,6 +171,7 @@ class ExportService:
         cell_style = ParagraphStyle(
             name="CellText",
             parent=styles["Normal"],
+            fontName=HEBREW_FONT_NAME,
             fontSize=8,
             textColor=colors.HexColor("#1E293B")
         )
@@ -148,7 +183,7 @@ class ExportService:
         ]
 
         table_data = [
-            ["Timestamp", "Object", "Category", "Confidence", "Entities", "Trigger", "Description"]
+            ["Timestamp", "Object", "Category", "Confidence", "Entities", "Trigger", "Description / Insight"]
         ]
 
         for r in records[:30]:  # Limit to 30 items for clean PDF pagination
@@ -157,16 +192,17 @@ class ExportService:
                 ts = ts[:16].replace("T", " ")
 
             entities = ", ".join(r.get("detected_entities", []))[:30]
-            desc = (r.get("visual_description", "") or "")[:60]
+            desc = r.get("enrichment_summary") or r.get("visual_description") or ""
+            desc = desc[:70]
 
             table_data.append([
                 Paragraph(str(ts), cell_style),
-                Paragraph(str(r.get("object_name", "")), cell_style),
-                Paragraph(str(r.get("category", "")), cell_style),
+                Paragraph(_bidi_format(str(r.get("object_name", ""))), cell_style),
+                Paragraph(_bidi_format(str(r.get("category", ""))), cell_style),
                 Paragraph(f"{r.get('confidence', 0.0) * 100:.0f}%", cell_style),
-                Paragraph(entities, cell_style),
+                Paragraph(_bidi_format(entities), cell_style),
                 Paragraph(str(r.get("trigger_source", "manual")), cell_style),
-                Paragraph(desc, cell_style)
+                Paragraph(_bidi_format(desc), cell_style)
             ])
 
         col_widths = [80, 100, 90, 60, 120, 80, 220]

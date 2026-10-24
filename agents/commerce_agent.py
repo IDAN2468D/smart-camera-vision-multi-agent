@@ -3,6 +3,7 @@ import logging
 from typing import Optional
 from agno.agent import Agent
 from agno.models.google import Gemini
+from agno.tools.duckduckgo import DuckDuckGoTools
 from config.settings import settings
 from models.detection_schema import VisionAnalysisResult, ProductPriceInfo
 
@@ -40,7 +41,8 @@ class CommercePriceAgent:
                 "1. If OCR text or brand names are visible, use them to identify the exact or most probable model (e.g., iPhone 15 Pro, Logitech MX Master 3S, Sony WH-1000XM5).",
                 "2. Provide an estimated price range in Israel in ILS (₪) formatted like '₪1,200 - ₪1,500' or '₪350 - ₪420'.",
                 "3. In specs_summary, provide 2-3 key technical highlights in clean, professional Hebrew.",
-                "4. Output strictly according to the ProductPriceInfo schema."
+                "4. Use the web_search tool to check current Israeli retail prices (e.g. on Zap, KSP, or Ivory) and supply an authentic retail or search link in source_url.",
+                "5. Output strictly according to the ProductPriceInfo schema."
             ]
 
             kwargs = {
@@ -50,6 +52,7 @@ class CommercePriceAgent:
                     Gemini(id="gemini-3.5-flash", api_key=self.api_key if self.api_key else None),
                     Gemini(id="gemini-3.8-flash", api_key=self.api_key if self.api_key else None)
                 ],
+                "tools": [DuckDuckGoTools()],
                 "instructions": instructions,
                 "markdown": False
             }

@@ -260,6 +260,28 @@ export const LatestAnalysis: React.FC<LatestAnalysisProps> = ({ detection }) => 
         </div>
       )}
 
+      {/* Temporal Scene Delta & Dwell Time */}
+      {detection.scene_delta && (
+        <div className="p-3 rounded-xl bg-cyan-950/30 border border-cyan-500/30 text-xs">
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <span className="font-semibold text-cyan-400 flex items-center gap-1.5 font-mono uppercase text-[11px]">
+              <Clock className="w-3.5 h-3.5" />
+              Scene Delta & Temporal Diff
+            </span>
+            {detection.scene_delta.dwell_time_seconds !== undefined && (
+              <span className="text-[10px] font-mono text-cyan-300">
+                שהייה: {detection.scene_delta.dwell_time_seconds} שניות
+              </span>
+            )}
+          </div>
+          {detection.scene_delta.delta_summary_hebrew && (
+            <p dir="rtl" className="text-slate-300 text-right font-sans text-xs">
+              {detection.scene_delta.delta_summary_hebrew}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Detected Entities Chips */}
       {detection.detected_entities && detection.detected_entities.length > 0 && (
         <div>

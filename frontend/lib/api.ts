@@ -1,3 +1,15 @@
+import {
+  SpatialBoundingBox,
+  SceneDeltaReport,
+  CompareAnalysisResult,
+  AskVisionResponse,
+  AskVisionResponseSchema,
+  CompareAnalysisResultSchema,
+  SceneDeltaReportSchema
+} from "./schemas/visionSchema";
+
+export type { SpatialBoundingBox, SceneDeltaReport, CompareAnalysisResult, AskVisionResponse };
+
 // When running in browser, use relative URL to route through Next.js proxy to backend
 const API_BASE_URL = typeof window !== "undefined" ? "" : (process.env.BACKEND_URL || "http://127.0.0.1:5000");
 
@@ -29,6 +41,8 @@ export interface DetectionItem {
   embedding_model?: string;
   human_evaluated?: boolean;
   human_verified?: boolean;
+  spatial_bboxes?: SpatialBoundingBox[];
+  scene_delta?: SceneDeltaReport | null;
 }
 
 export interface TelemetryMetrics {
@@ -188,4 +202,62 @@ export async function fetchTelemetryMetrics(): Promise<TelemetryMetrics | null> 
   } catch (error) {
     return null;
   }
+}
+
+export async function askVisionLive(
+  image: string,
+  questionHebrew: string
+): Promise<AskVisionResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/ask`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image, question_hebrew: questionHebrew }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to process visual question");
+  }
+  const payload = await res.json();
+  return AskVisionResponseSchema.parse(payload.data);
+}
+
+export async function compareProducts(
+  imageA: string,
+  imageB?: string,
+  labelA?: string,
+  labelB?: string
+): Promise<CompareAnalysisResult> {
+  const res = await fetch(`${API_BASE_URL}/api/compare`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      image_a: imageA,
+      image_b: imageB,
+      label_a: labelA,
+      label_b: labelB,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to compare products");
+  }
+  const payload = await res.json();
+  return CompareAnalysisResultSchema.parse(payload.data);
+}
+
+export async function getSceneZoneDiff(
+  image?: string,
+  zoneId: string = "default_zone"
+): Promise<SceneDeltaReport> {
+  const res = await fetch(`${API_BASE_URL}/api/zones/diff`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image, zone_id: zoneId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to compute scene delta");
+  }
+  const payload = await res.json();
+  return SceneDeltaReportSchema.parse(payload.data.delta);
 }

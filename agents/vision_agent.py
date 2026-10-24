@@ -7,7 +7,7 @@ from agno.models.google import Gemini
 from agno.media import Image
 
 from config.settings import settings
-from models.detection_schema import VisionAnalysisResult
+from models.detection_schema import VisionAnalysisResult, SpatialBoundingBox
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,8 @@ class VisionPerceptionAgent:
                 "4. PRIMARY FOCUS (object_name): Identify the main subject/focus. If the user is holding an item, name the item. If displaying a hand or gesture, name the hand/gesture. If looking at the camera, name the person/face.",
                 "5. ALL DETECTED ENTITIES: Enumerate all recognized elements in detected_entities (e.g. ['Human Face', 'Right Hand', 'Smartphone']).",
                 "6. OCR TEXT: Read and extract any visible text, brand logos, or writing on screens, clothing, or objects.",
-                "7. Provide an objective visual_description and a high-accuracy confidence score."
+                "7. Provide an objective visual_description and a high-accuracy confidence score.",
+                "8. SPATIAL BOUNDING BOXES: For primary detected items or faces, produce spatial_bboxes containing label, confidence (0.0-1.0), normalized coordinates x_min, y_min, x_max, y_max (between 0.0 and 1.0), and horizontal pan_x from -1.0 (left) to 1.0 (right)."
             ]
 
             # Support both output_schema (Agno 3.x) and response_model (Agno 2.x)
@@ -85,7 +86,18 @@ class VisionPerceptionAgent:
                 category="Drinkware",
                 detected_text="Ceramic Coffee Co.",
                 confidence=0.96,
-                visual_description="A white ceramic coffee mug with black lettering, placed on an office desk."
+                visual_description="A white ceramic coffee mug with black lettering, placed on an office desk.",
+                spatial_bboxes=[
+                    SpatialBoundingBox(
+                        label="Coffee Mug",
+                        confidence=0.96,
+                        x_min=0.35,
+                        y_min=0.3,
+                        x_max=0.65,
+                        y_max=0.75,
+                        pan_x=0.0
+                    )
+                ]
             )
 
         # Optimize image size (max 800px) for ultra-fast TLS transfer and reduced token latency
