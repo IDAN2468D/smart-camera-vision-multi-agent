@@ -57,9 +57,15 @@ class VoiceService:
             return None
 
         words = clean_text.split()
-        # Keep speech concise (max ~28 words / 1-2 punchy sentences) for sub-second TTS synthesis
-        if len(words) > 28:
-            clean_text = " ".join(words[:28]) + "..."
+        # Allow reading full insight without cutting off mid-sentence.
+        # Only cap extremely long inputs (>120 words) at a natural sentence boundary.
+        if len(words) > 120:
+            truncated = " ".join(words[:120])
+            last_period = max(truncated.rfind(". "), truncated.rfind("! "), truncated.rfind("? "))
+            if last_period > 40:
+                clean_text = truncated[:last_period + 1].strip()
+            else:
+                clean_text = truncated.strip() + "."
 
         target_voice = voice or self.voice
         cache_key = f"{target_voice}_{clean_text}"
@@ -75,7 +81,7 @@ class VoiceService:
                 res = requests.post(
                     f"{voice_service_url}/synthesize",
                     json={"text": clean_text, "voice": target_voice},
-                    timeout=12
+                    timeout=25
                 )
                 if res.status_code == 200:
                     data = res.json()
@@ -89,18 +95,11 @@ class VoiceService:
 
         # 2. Local in-process synthesis fallback
         try:
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    import concurrent.futures
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                        audio_bytes = executor.submit(
-                            lambda: asyncio.run(self._synthesize_async(clean_text, target_voice))
-                        ).result(timeout=10)
-                else:
-                    audio_bytes = loop.run_until_complete(self._synthesize_async(clean_text, target_voice))
-            except RuntimeError:
-                audio_bytes = asyncio.run(self._synthesize_async(clean_text, target_voice))
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                audio_bytes = executor.submit(
+                    lambda: asyncio.run(self._synthesize_async(clean_text, target_voice))
+                ).result(timeout=25)
 
             if not audio_bytes:
                 logger.warning("edge-tts returned empty audio buffer")
@@ -109,7 +108,7 @@ class VoiceService:
             encoded = base64.b64encode(audio_bytes).decode("utf-8")
             data_uri = f"data:audio/mp3;base64,{encoded}"
             self._audio_cache[cache_key] = data_uri
-            logger.info(f"Synthesized Hebrew speech audio ({len(audio_bytes)} bytes) for: '{clean_text[:35]}...'")
+            logger.info(f"Synthesized full Hebrew speech ({len(audio_bytes)} bytes) for: '{clean_text[:45]}...'")
             return data_uri
 
         except Exception as e:
