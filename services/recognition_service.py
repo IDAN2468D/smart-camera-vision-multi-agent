@@ -67,7 +67,7 @@ class RecognitionService:
             
         # 5. Broadcast real-time SSE event to all connected web clients
         try:
-            sse_service.publish("new_detection", record.model_dump(mode="json"))
+            sse_service.publish("new_detection", record.model_dump(mode="json", exclude={"image_embedding"}))
         except Exception as e:
             logger.error(f"Failed to broadcast SSE new_detection event: {e}")
 

@@ -26,6 +26,7 @@ graph TD
         Gateway -->|REST / SSE Stream| Backend["⚙️ Microservice 2: Multi-Agent Orchestrator (Port 5005)"]
         Backend -->|HTTP POST :5001| VoiceMS["🔊 Microservice 3: Hebrew Voice TTS Engine (Port 5007)"]
         Backend -->|HTTP POST :5002| MCP_MS["🔌 Microservice 4: Model Context Protocol Server (Port 5006)"]
+        Backend -->|HTTP POST :5003| EmbedMS["🧠 Microservice 5: Visual RAG Embedding Engine (Port 5008)"]
         
         subgraph Agents Collaboration ["Collaborative Agent Team"]
             Backend --> Agent1["👁️ VisionPerceptionAgent (Gemini 3.5 Vision + OCR)"]
@@ -38,6 +39,7 @@ graph TD
     
     Backend -->|TLS Persistent Sync| Atlas[("☁️ MongoDB Atlas NoSQL Cluster")]
     MCP_MS -->|Memory Queries| Atlas
+    EmbedMS -->|Vector Search| Atlas
     ExternalAI["🤖 External AI Clients (Claude / Cursor / IDE)"] -->|JSON-RPC 2.0| MCP_MS
 ```
 
@@ -96,6 +98,29 @@ graph TD
 | **Backend Orchestrator** | `vision_ai_backend` | `5000` | **`5005`** | Flask REST API, Agno Multi-Agent Team, SSE Bus | `GET /api/health` |
 | **MCP Server** | `vision_ai_mcp` | `5002` | **`5006`** | Model Context Protocol JSON-RPC 2.0 Server | `GET /health` |
 | **Voice TTS Engine** | `vision_ai_voice` | `5001` | **`5007`** | Neural Hebrew Speech Synthesizer (`edge-tts`) | `GET /health` |
+| **Visual RAG Embedding Engine** | `vision_ai_embedding` | `5003` | **`5008`** | Multimodal embeddings (`gemini-embedding-2`) + Atlas Vector Search | `GET /health` |
+
+### 🧠 Embedding Microservice (Visual RAG)
+
+Every scan is embedded as **image + structured vision text** into one 768-dim vector and stored on the detection (`image_embedding`, tagged with `embedding_model`). Before enrichment, the orchestrator searches for visually/semantically similar past detections and passes them to `KnowledgeEnrichmentAgent`.
+
+| Endpoint | Description |
+| :--- | :--- |
+| `POST /embed` | `{"text": "...", "image_base64": "..."}` → vector |
+| `POST /search/similar` | `{"query": "something to drink from", "limit": 5}` or `{"vector": [...], "model": "..."}` |
+| `POST /index/ensure` | Creates the Atlas `vectorSearch` index (`image_embedding` cosine + `embedding_model` filter) |
+| `POST /backfill` | `{"limit": 50}` — embeds existing detections that have no vector yet |
+| Backend: `GET /api/detections/similar?q=...` | Semantic search proxied through the backend |
+| MCP tool: `semantic_visual_search` | Same search exposed to external AI clients |
+
+**One-time setup** after `docker compose up -d`:
+
+```bash
+curl -X POST http://localhost:5008/index/ensure                                  # create the vector index
+curl -X POST http://localhost:5008/backfill -H "Content-Type: application/json" -d '{"limit": 200}'
+```
+
+> Resilience: if the service is down the backend embeds in-process; if `$vectorSearch` is unavailable (index building / non-Atlas MongoDB) search falls back to local cosine similarity; without a Gemini key a deterministic local hashing embedding is used (`local-hash-v1`, never mixed with Gemini vectors).
 
 ---
 

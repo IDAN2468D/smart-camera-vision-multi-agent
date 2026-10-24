@@ -25,6 +25,8 @@ export interface DetectionItem {
   product_info?: ProductPriceInfo | null;
   thumbnail_base64?: string | null;
   tts_audio_base64?: string | null;
+  similarity_score?: number;
+  embedding_model?: string;
   human_evaluated?: boolean;
   human_verified?: boolean;
 }
@@ -82,6 +84,26 @@ export async function searchDetections(query: string): Promise<DetectionItem[]> 
     return data.data || [];
   } catch (error) {
     console.error("Search failed:", error);
+    return [];
+  }
+}
+
+export async function searchSimilarDetections(
+  query: string,
+  limit: number = 10,
+  minScore: number = 0.0
+): Promise<DetectionItem[]> {
+  try {
+    if (!query.trim()) return await fetchRecentDetections();
+    const res = await fetch(
+      `${API_BASE_URL}/api/detections/similar?q=${encodeURIComponent(query)}&limit=${limit}&min_score=${minScore}`,
+      { cache: "no-store" }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.data || [];
+  } catch (error) {
+    console.error("Semantic search failed:", error);
     return [];
   }
 }

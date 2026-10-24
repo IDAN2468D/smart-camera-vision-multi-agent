@@ -73,6 +73,7 @@ def test_mcp_server_tools_list():
     tools = {t["name"] for t in response["result"]["tools"]}
     assert "get_latest_detection" in tools
     assert "search_visual_memory" in tools
+    assert "semantic_visual_search" in tools
     assert "get_system_telemetry" in tools
 
 def test_telemetry_cost_calculations():

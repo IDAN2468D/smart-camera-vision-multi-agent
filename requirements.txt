@@ -10,3 +10,4 @@ pillow
 edge-tts
 reportlab
 openpyxl
+requests

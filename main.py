@@ -71,10 +71,17 @@ def create_app() -> Flask:
                     - GET  /api/health<br>
                     - GET  /api/docs (Swagger UI)<br>
                     - GET  /api/detections<br>
+                    - GET  /api/detections/similar (Visual RAG)<br>
                     - POST /api/analyze<br>
                     - GET  /api/stream (SSE)<br>
                     - GET  /api/export (Excel/PDF)<br>
-                    - POST /api/mcp (Model Context Protocol)
+                    - POST /api/mcp (Model Context Protocol)<br><br>
+                    <strong>Microservices Mesh:</strong><br>
+                    - 🌐 Frontend: <a href="http://localhost:3002" style="color:#38bdf8;">http://localhost:3002</a><br>
+                    - ⚙️ Backend API: <a href="http://localhost:5005" style="color:#38bdf8;">http://localhost:5005</a><br>
+                    - 🔌 MCP Server: <a href="http://localhost:5006" style="color:#a78bfa;">http://localhost:5006</a><br>
+                    - 🔊 Voice TTS: <a href="http://localhost:5007" style="color:#34d399;">http://localhost:5007</a><br>
+                    - 🧠 Embedding Visual RAG: <a href="http://localhost:5008" style="color:#6ee7b7;">http://localhost:5008</a>
                 </div>
             </div>
         </body>

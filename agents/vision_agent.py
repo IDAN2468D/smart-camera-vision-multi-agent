@@ -88,8 +88,22 @@ class VisionPerceptionAgent:
                 visual_description="A white ceramic coffee mug with black lettering, placed on an office desk."
             )
 
+        # Optimize image size (max 800px) for ultra-fast TLS transfer and reduced token latency
+        target_img_path = img_file
+        try:
+            from PIL import Image as PILImage
+            if img_file.stat().st_size > 150_000:
+                with PILImage.open(img_file) as im:
+                    if max(im.size) > 800:
+                        im.thumbnail((800, 800))
+                        opt_path = img_file.with_name(f"opt_{img_file.name}")
+                        im.convert("RGB").save(opt_path, "JPEG", quality=85)
+                        target_img_path = opt_path
+        except Exception as opt_err:
+            logger.debug(f"Image preprocessing skipped: {opt_err}")
+
         agent = self._get_agent()
-        image_input = Image(filepath=img_file)
+        image_input = Image(filepath=target_img_path)
         
         prompt = (
             "Analyze everything visible in this camera frame: detect human faces, hands, gestures, and any physical objects. "

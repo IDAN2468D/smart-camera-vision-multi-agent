@@ -11,6 +11,7 @@ from services.export_service import export_service
 from services.mcp_server_service import mcp_server_service
 from services.guardrails_service import guardrails_service
 from services.telemetry_service import telemetry_service
+from services.embedding_client import embedding_client
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ def health_check():
             "sse_stream": True,
             "excel_pdf_export": True,
             "mcp_server": True,
+            "visual_rag_vector_search": True,
             "ai_guardrails": True,
             "human_in_the_loop": True,
             "context_cost_engineering": True
@@ -142,6 +144,25 @@ def search_detections():
         "count": len(matches),
         "data": matches
     }), 200
+
+@api_blueprint.route("/detections/similar", methods=["GET"])
+def similar_detections():
+    """Semantic (Visual RAG) search via the Embedding microservice: e.g. ?q=something to drink from"""
+    query = request.args.get("q", default="", type=str).strip()
+    limit = request.args.get("limit", default=5, type=int)
+    min_score = request.args.get("min_score", default=0.0, type=float)
+    if not query:
+        return jsonify({
+            "success": False,
+            "message": "Query parameter 'q' is required for semantic search."
+        }), 400
+
+    try:
+        result = embedding_client.search_similar(query=query, limit=limit, min_score=min_score)
+        return jsonify({"success": True, "query": query, **result}), 200
+    except Exception as e:
+        logger.error(f"Semantic search failed: {e}", exc_info=True)
+        return jsonify({"success": False, "message": str(e)}), 500
 
 @api_blueprint.route("/export", methods=["GET"])
 def export_report():
@@ -307,6 +328,7 @@ def openapi_spec():
             "/api/analyze": {"post": {"summary": "Analyze camera frame"}},
             "/api/stream": {"get": {"summary": "SSE real-time stream"}},
             "/api/detections": {"get": {"summary": "Recent detections"}},
+            "/api/detections/similar": {"get": {"summary": "Semantic Visual RAG search (Atlas Vector Search)"}},
             "/api/export": {"get": {"summary": "Export PDF/Excel"}},
             "/api/mcp": {"post": {"summary": "Model Context Protocol JSON-RPC"}},
             "/api/detections/feedback": {"post": {"summary": "Human-In-The-Loop evaluation"}},

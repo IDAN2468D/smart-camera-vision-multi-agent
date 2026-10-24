@@ -39,10 +39,40 @@ services:
       - COLLECTION_NAME=${COLLECTION_NAME:-detections}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - MODEL_ID=${MODEL_ID:-gemini-3.5-flash-lite}
+      - EMBEDDING_SERVICE_URL=http://embedding_service:5003
     networks:
       - vision-agent-net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # Microservice 5: Visual RAG Embedding & Vector Search Engine (Port 5003 -> Host 5008)
+  embedding_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vision_ai_embedding
+    command: ["python", "services/embedding_service_app.py"]
+    restart: unless-stopped
+    ports:
+      - "${PORT_EMBEDDING:-5008}:5003"
+    environment:
+      - PORT=5003
+      - PYTHONPATH=/app
+      - MONGO_URI=${MONGO_URI}
+      - DB_NAME=${DB_NAME:-vision_agents_db}
+      - COLLECTION_NAME=${COLLECTION_NAME:-detections}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-gemini-embedding-2}
+      - EMBEDDING_DIM=${EMBEDDING_DIM:-768}
+      - VECTOR_INDEX_NAME=${VECTOR_INDEX_NAME:-vector_index}
+    networks:
+      - vision-agent-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -69,10 +99,16 @@ services:
       - PYTHONPATH=/app
       - VOICE_SERVICE_URL=http://voice_service:5001
       - MCP_SERVICE_URL=http://mcp_service:5002
+      - EMBEDDING_SERVICE_URL=http://embedding_service:5003
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-gemini-embedding-2}
+      - EMBEDDING_DIM=${EMBEDDING_DIM:-768}
+      - SIMILARITY_THRESHOLD=${SIMILARITY_THRESHOLD:-0.8}
     depends_on:
       voice_service:
         condition: service_healthy
       mcp_service:
+        condition: service_healthy
+      embedding_service:
         condition: service_healthy
     networks:
       - vision-agent-net

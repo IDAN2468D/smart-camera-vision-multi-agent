@@ -13,13 +13,14 @@ import {
   FileText,
   X,
   Maximize2,
-  Tag
+  Tag,
+  Sparkles
 } from "lucide-react";
 
 interface DetectionHistoryProps {
   detections: DetectionItem[];
   onSelectDetection: (item: DetectionItem) => void;
-  onSearch: (query: string) => void;
+  onSearch: (query: string, mode: "semantic" | "keyword") => void;
   activeItem?: DetectionItem | null;
 }
 
@@ -30,12 +31,20 @@ export const DetectionHistory: React.FC<DetectionHistoryProps> = ({
   activeItem,
 }) => {
   const [query, setQuery] = useState("");
+  const [searchMode, setSearchMode] = useState<"semantic" | "keyword">("semantic");
   const [lightboxItem, setLightboxItem] = useState<DetectionItem | null>(null);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setQuery(val);
-    onSearch(val);
+    onSearch(val, searchMode);
+  };
+
+  const handleModeSwitch = (newMode: "semantic" | "keyword") => {
+    setSearchMode(newMode);
+    if (query) {
+      onSearch(query, newMode);
+    }
   };
 
   const handleExport = (format: "excel" | "pdf") => {
@@ -75,16 +84,65 @@ export const DetectionHistory: React.FC<DetectionHistoryProps> = ({
           </div>
         </div>
 
-        {/* Search Input Box */}
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={query}
-            onChange={handleSearchChange}
-            placeholder="Filter by object name (e.g. Face, Phone)..."
-            className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900/80 border border-slate-700/80 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-400 transition-all font-mono"
-          />
+        {/* Search Mode Selector & Input Box */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+            <span className="flex items-center gap-1 text-slate-300">
+              <Sparkles className="w-3 h-3 text-emerald-400" />
+              <span>Search Engine</span>
+            </span>
+            <div className="inline-flex rounded-lg bg-slate-900/90 p-0.5 border border-slate-800">
+              <button
+                type="button"
+                onClick={() => handleModeSwitch("semantic")}
+                className={`px-2 py-0.5 rounded-md text-[10px] font-mono transition-all flex items-center gap-1 ${
+                  searchMode === "semantic"
+                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+                title="Atlas Vector Search מול וקטורי Gemini (Visual RAG)"
+              >
+                <Sparkles className="w-2.5 h-2.5" />
+                <span>Visual RAG</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleModeSwitch("keyword")}
+                className={`px-2 py-0.5 rounded-md text-[10px] font-mono transition-all flex items-center gap-1 ${
+                  searchMode === "keyword"
+                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+                title="סינון לפי שם אובייקט מדויק"
+              >
+                <Search className="w-2.5 h-2.5" />
+                <span>Exact Name</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="relative">
+            {searchMode === "semantic" ? (
+              <Sparkles className="w-4 h-4 text-emerald-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            ) : (
+              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            )}
+            <input
+              type="text"
+              value={query}
+              onChange={handleSearchChange}
+              placeholder={
+                searchMode === "semantic"
+                  ? "Visual RAG (e.g. coffee cup, device with screen, something blue)..."
+                  : "Filter by object name (e.g. Smartphone, Face)..."
+              }
+              className={`w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900/80 border text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none transition-all font-mono ${
+                searchMode === "semantic"
+                  ? "border-emerald-500/40 focus:border-emerald-400"
+                  : "border-slate-700/80 focus:border-cyan-400"
+              }`}
+            />
+          </div>
         </div>
 
         {/* Detections List with WebP Thumbnails */}
@@ -150,6 +208,16 @@ export const DetectionHistory: React.FC<DetectionHistoryProps> = ({
                       <span className="text-cyan-400 font-semibold">
                         {Math.round(item.confidence * 100)}%
                       </span>
+
+                      {typeof item.similarity_score === "number" && (
+                        <span
+                          className="flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/70 text-emerald-300 border border-emerald-500/40 font-bold"
+                          title={`Visual RAG similarity score (${item.embedding_model || "gemini-embedding-2"})`}
+                        >
+                          <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+                          {Math.round(item.similarity_score * 100)}% Match
+                        </span>
+                      )}
 
                       {item.face_detected && (
                         <span className="flex items-center text-emerald-400 text-[10px]" title="Face Detected">

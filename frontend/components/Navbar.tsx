@@ -2,7 +2,7 @@
 
 import React from "react";
 import { HealthResponse } from "@/lib/api";
-import { Eye, Database, Cpu, Activity, RefreshCw } from "lucide-react";
+import { Eye, Database, Cpu, Activity, RefreshCw, Sparkles } from "lucide-react";
 
 interface NavbarProps {
   health: HealthResponse | null;
@@ -75,7 +75,13 @@ export const Navbar: React.FC<NavbarProps> = ({ health, onRefresh, isLoading }) 
           {/* MCP Protocol Badge */}
           <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border bg-purple-500/10 border-purple-500/30 text-purple-300 text-xs font-mono">
             <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-            <span>MCP Server</span>
+            <span>MCP: 5006</span>
+          </div>
+
+          {/* Visual RAG Embedding Microservice Badge */}
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border bg-emerald-500/10 border-emerald-500/30 text-emerald-300 text-xs font-mono">
+            <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse" />
+            <span>RAG: 5008</span>
           </div>
 
           {/* Swagger OpenAPI Docs Link */}

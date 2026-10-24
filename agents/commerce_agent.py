@@ -23,6 +23,7 @@ class CommercePriceAgent:
         self.model_id = model_id or settings.MODEL_ID
         self.api_key = api_key or settings.GEMINI_API_KEY
         self._agent = None
+        self._cache: dict = {}
 
     def _get_agent(self) -> Agent:
         """Lazily initialize the Agno Agent with Gemini model for structured product pricing."""
@@ -99,6 +100,11 @@ class CommercePriceAgent:
             logger.debug(f"Item '{vision_result.object_name}' is not classified as commercial product. Skipping price lookup.")
             return None
 
+        cache_key = f"{vision_result.object_name.lower().strip()}_{str(vision_result.detected_text).lower().strip()}"
+        if cache_key in self._cache:
+            logger.info(f"[CommerceAgent] Returning cached pricing for: '{vision_result.object_name}' (0ms)")
+            return self._cache[cache_key]
+
         prompt = (
             f"Analyze this detected product and provide market price in ILS and specs in Hebrew:\n"
             f"- Object Name: {vision_result.object_name}\n"
@@ -113,20 +119,25 @@ class CommercePriceAgent:
             response = agent.run(prompt)
             content = response.content
 
+            info: Optional[ProductPriceInfo] = None
             if isinstance(content, ProductPriceInfo):
-                return content
+                info = content
             elif isinstance(content, dict):
-                return ProductPriceInfo(**content)
+                info = ProductPriceInfo(**content)
             elif isinstance(content, str):
                 # Attempt to parse json string if wrapped in markdown
                 clean_json = content.strip()
                 if clean_json.startswith("```"):
                     clean_json = clean_json.split("\n", 1)[1].rsplit("```", 1)[0].strip()
                 data = json.loads(clean_json)
-                return ProductPriceInfo(**data)
+                info = ProductPriceInfo(**data)
             else:
                 logger.warning(f"Unexpected response type from CommercePriceAgent: {type(content)}")
                 return None
+
+            if info:
+                self._cache[cache_key] = info
+            return info
 
         except Exception as e:
             logger.error(f"Failed to lookup product pricing for '{vision_result.object_name}': {e}")

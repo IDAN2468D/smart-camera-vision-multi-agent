@@ -19,6 +19,7 @@ class VoiceService:
 
     def __init__(self, voice: str = DEFAULT_VOICE):
         self.voice = voice
+        self._audio_cache: dict = {}
 
     @staticmethod
     def _clean_text_for_speech(text: str) -> str:
@@ -56,10 +57,15 @@ class VoiceService:
             return None
 
         words = clean_text.split()
-        if len(words) > 80:
-            clean_text = " ".join(words[:80]) + "..."
+        # Keep speech concise (max ~28 words / 1-2 punchy sentences) for sub-second TTS synthesis
+        if len(words) > 28:
+            clean_text = " ".join(words[:28]) + "..."
 
         target_voice = voice or self.voice
+        cache_key = f"{target_voice}_{clean_text}"
+        if cache_key in self._audio_cache:
+            logger.info("[VoiceService] Returning cached audio (0ms)")
+            return self._audio_cache[cache_key]
 
         # 1. Attempt calling dedicated Voice Microservice if configured
         voice_service_url = os.environ.get("VOICE_SERVICE_URL")
@@ -69,13 +75,14 @@ class VoiceService:
                 res = requests.post(
                     f"{voice_service_url}/synthesize",
                     json={"text": clean_text, "voice": target_voice},
-                    timeout=8
+                    timeout=12
                 )
                 if res.status_code == 200:
                     data = res.json()
                     b64 = data.get("audio_base64")
                     if b64:
                         logger.info(f"[Microservice] Successfully synthesized audio via {voice_service_url}")
+                        self._audio_cache[cache_key] = b64
                         return b64
             except Exception as net_err:
                 logger.warning(f"Voice microservice call failed ({net_err}). Falling back to local synthesis.")
@@ -101,6 +108,7 @@ class VoiceService:
 
             encoded = base64.b64encode(audio_bytes).decode("utf-8")
             data_uri = f"data:audio/mp3;base64,{encoded}"
+            self._audio_cache[cache_key] = data_uri
             logger.info(f"Synthesized Hebrew speech audio ({len(audio_bytes)} bytes) for: '{clean_text[:35]}...'")
             return data_uri
 

@@ -67,6 +67,25 @@ class VisionMCPServerService:
                 }
             },
             {
+                "name": "semantic_visual_search",
+                "description": "Visual RAG: find past camera detections that are semantically/visually similar to a free-text description (MongoDB Atlas Vector Search over multimodal embeddings).",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Natural-language description (e.g. 'something to drink coffee from', 'a device with a screen')"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum number of records to return (default 5)",
+                            "default": 5
+                        }
+                    },
+                    "required": ["query"]
+                }
+            },
+            {
                 "name": "get_system_telemetry",
                 "description": "Get real-time operational metrics: active model ID, database status, and feature flags.",
                 "inputSchema": {
@@ -117,6 +136,28 @@ class VisionMCPServerService:
                 })
             return {
                 "content": [{"type": "text", "text": json.dumps(clean_matches, ensure_ascii=False, indent=2)}]
+            }
+
+        elif tool_name == "semantic_visual_search":
+            from services.embedding_client import embedding_client
+            q = arguments.get("query", "")
+            limit = arguments.get("limit", 5)
+            if not q.strip():
+                return {"isError": True, "content": [{"type": "text", "text": "Argument 'query' is required."}]}
+            result = embedding_client.search_similar(query=q, limit=limit)
+            clean_matches = [{
+                "object_name": m.get("object_name"),
+                "category": m.get("category"),
+                "similarity_score": round(m.get("similarity_score", 0.0), 4),
+                "timestamp": m.get("timestamp"),
+                "description": m.get("visual_description")
+            } for m in result.get("data", [])]
+            return {
+                "content": [{"type": "text", "text": json.dumps({
+                    "search_mode": result.get("search_mode"),
+                    "embedding_model": result.get("model"),
+                    "matches": clean_matches
+                }, ensure_ascii=False, indent=2)}]
             }
 
         elif tool_name == "get_system_telemetry":

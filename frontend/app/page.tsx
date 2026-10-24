@@ -5,6 +5,7 @@ import {
   getSystemHealth,
   fetchRecentDetections,
   searchDetections,
+  searchSimilarDetections,
   DetectionItem,
   HealthResponse,
 } from "@/lib/api";
@@ -104,10 +105,20 @@ export default function Home() {
     setDetections((prev) => [newItem, ...prev.filter((d) => d.timestamp !== newItem.timestamp)]);
   };
 
-  // Handle search query
-  const handleSearch = async (query: string) => {
-    const results = await searchDetections(query);
-    setDetections(results);
+  // Handle search query (supports Semantic Visual RAG and keyword matching)
+  const handleSearch = async (query: string, mode: "semantic" | "keyword" = "semantic") => {
+    if (!query.trim()) {
+      const all = await fetchRecentDetections();
+      setDetections(all);
+      return;
+    }
+    if (mode === "semantic") {
+      const results = await searchSimilarDetections(query);
+      setDetections(results);
+    } else {
+      const results = await searchDetections(query);
+      setDetections(results);
+    }
   };
 
   return (

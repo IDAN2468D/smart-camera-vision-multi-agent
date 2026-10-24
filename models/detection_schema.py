@@ -37,3 +37,4 @@ class DetectionRecord(VisionAnalysisResult):
     thumbnail_base64: Optional[str] = Field(default=None, description="Compressed WebP thumbnail for visual timeline")
     tts_audio_base64: Optional[str] = Field(default=None, description="Base64 encoded MP3 speech audio of the Hebrew insight")
     image_embedding: Optional[List[float]] = Field(default=None, description="Visual embedding vector for Atlas Vector Search")
+    embedding_model: Optional[str] = Field(default=None, description="Embedding model that produced image_embedding (vectors are only comparable within the same model)")
