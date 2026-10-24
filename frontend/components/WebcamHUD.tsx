@@ -326,10 +326,12 @@ export const WebcamHUD: React.FC<WebcamHUDProps> = ({
               </div>
             </div>
 
-            {/* 60-120Hz GPU Canvas Overlay */}
+            {/* 60-120Hz GPU Canvas Overlay with Live Real-Time Tracking */}
             <VisionCanvasOverlay
+              videoRef={videoRef}
               bboxes={activeDetection?.spatial_bboxes}
               gestureDetected={currentTrigger === "gesture_thumbs_up" ? "👍 Thumbs-Up" : null}
+              isMirrored={isMirrored}
             />
 
             {/* Corner Targeting Brackets */}
