@@ -21,9 +21,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Install Python dependencies
+# Install Python dependencies and Playwright Chromium
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    playwright install chromium && \
+    playwright install-deps chromium
 
 # Copy backend application source
 COPY config/ ./config/
